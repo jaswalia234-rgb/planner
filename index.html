@@ -180,22 +180,81 @@ button{font:inherit;color:inherit;background:none;border:0}
   #layer{cursor:copy}
   #scroll::-webkit-scrollbar{width:8px}#scroll::-webkit-scrollbar-thumb{background:var(--surf2);border-radius:4px}
 }
+/* ---------- wide screens: iPad + Mac ---------- */
+.wideOnly{display:none}
+#colHeads{display:none}
+.vcol{position:absolute;top:0;bottom:0;border-left:1px solid var(--rule);pointer-events:none}
+.vcol.today{background:rgba(231,169,162,.035)}
 @media (min-width:700px){
-  #top,#scroll{left:max(0px,calc(50% - 330px));right:max(0px,calc(50% - 330px))}
-  #tray{left:max(14px,calc(50% - 316px));right:max(14px,calc(50% - 316px))}
-  .sheet{left:max(0px,calc(50% - 300px));right:max(0px,calc(50% - 300px));bottom:20px;border-radius:26px;max-height:86%}
+  .wideOnly{display:flex}
+  #top{padding-top:calc(18px + env(safe-area-inset-top))}
+  .head{padding:0 22px}
+  #dateLbl{font-size:14px}
+  .week{margin:12px 14px 0}
+  .wd.inr{background:var(--surf2)}
+  .week{max-width:640px}
+  .chips{padding:10px 22px 4px}
+  #allday{display:none}
+  #colHeads{display:flex;padding-left:58px;margin-top:8px;border-bottom:1px solid var(--rule)}
+  .chd{flex:1;min-width:0;padding:8px 10px 9px;border-left:1px solid var(--rule);cursor:default}
+  .chd .dn{display:flex;align-items:baseline;gap:7px;font-size:13px;color:var(--text2)}
+  .chd .dn b{font-size:22px;font-weight:600;color:var(--text);letter-spacing:-.3px}
+  .chd.today .dn b{color:var(--accent)}
+  .chd .pl{font-size:11.5px;color:var(--text3);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .chd .ads{display:flex;gap:4px;flex-wrap:wrap;margin-top:5px}
+  .chd .ads span{padding:3px 8px;border-radius:9px;background:var(--surf2);font-size:11px;color:var(--text2);max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .b{border-radius:12px;padding:6px 9px 5px}
+  .b .t{font-size:13.5px;gap:6px}
+  .b .t .tm{font-size:11px}
+  .b .m{margin-left:20px;font-size:11.5px}
+  .b .ck{font-size:12.5px}
+  .b.cont{border-top-left-radius:4px;border-top-right-radius:4px}
+  #tray{left:max(14px,calc(50% - 320px));right:max(14px,calc(50% - 320px))}
+  /* sheets become dialogs; add + edit open next to what you clicked */
+  .sheet{left:50%;right:auto;bottom:auto;top:50%;width:420px;max-width:calc(100% - 32px);border-radius:22px;padding:16px 16px 16px;max-height:86vh;
+    transform:translate(-50%,-48%) scale(.98);opacity:0;pointer-events:none;transition:opacity .14s,transform .14s;box-shadow:0 18px 50px rgba(0,0,0,.45)}
+  .sheet.on{transform:translate(-50%,-50%);opacity:1;pointer-events:auto}
+  .sheet.pop{transform:scale(.98);transform-origin:top left}
+  .sheet.pop.on{transform:none}
+  .sheet h3{text-align:left;font-size:16px}
+  .sheet .sub{text-align:left}
+  .hs{margin-left:0;margin-right:0;padding:0;flex-wrap:wrap;overflow:visible}
+  #shade.light{background:rgba(10,6,8,.12)}
   #focus{padding-left:max(22px,calc(50% - 300px));padding-right:max(22px,calc(50% - 300px))}
+  #toast{bottom:calc(30px + env(safe-area-inset-bottom))}
+}
+/* big screens: to-dos live in a sidebar */
+@media (min-width:1100px){
+  #top,#scroll{left:300px}
+  #tray{left:14px;right:auto;width:272px;top:calc(14px + env(safe-area-inset-top));bottom:calc(14px + env(safe-area-inset-bottom));border-radius:20px;box-shadow:none;display:flex;flex-direction:column}
+  #tray .trow{padding:16px 14px 10px 16px;flex-wrap:wrap}
+  .trow .tl{font-size:17px;font-weight:600}
+  .trow .tl small{font-weight:400;margin-top:2px}
+  #focusBtn{max-width:100%}
+  #tray.open #focusBtn{display:none}
+  #trayList,#tray.open #trayList{max-height:none;flex:1;transition:none}
+  #trayX,#tray.open #trayX{display:none}
+  .ti{padding:10px 16px;font-size:14px;border-top:0;border-radius:12px;margin:0 6px 2px}
+  .ti{flex-wrap:wrap;row-gap:1px}
+  .ti small{flex-basis:100%;margin:0 0 0 24px}
+  #toast{left:calc(50% + 150px)}
+}
+@media (min-width:700px) and (hover:hover){
+  .chd{cursor:pointer}.chd:hover .dn b{color:var(--accent)}
+  .b.block:hover,.b.todo:hover{filter:brightness(1.06)}
+  .ti:hover{background:var(--surf2);filter:none}
 }
 </style></head>
 <body>
 <div id="top">
   <div class="head">
     <div><div id="dayName">today</div><div id="dateLbl"></div><div id="subLbl"></div></div>
-    <div class="hbtns"><button class="round" id="todayBtn" style="font-size:12px;width:auto;padding:0 13px">today</button><button class="round" id="menuBtn"></button></div>
+    <div class="hbtns"><button class="round wideOnly" id="dPrev" aria-label="previous day"></button><button class="round wideOnly" id="dNext" aria-label="next day"></button><button class="round" id="todayBtn" style="font-size:12px;width:auto;padding:0 13px">today</button><button class="round" id="menuBtn"></button></div>
   </div>
   <div class="week"><div class="wk-arrow" id="wkPrev"></div><div class="wdays" id="wdays"></div><div class="wk-arrow" id="wkNext"></div></div>
   <div class="chips" id="chips"></div>
   <div id="allday"></div>
+  <div id="colHeads"></div>
   <div class="banner" id="sweepBanner"><span id="sweepTxt">end of day — 3 things unfinished</span><button id="sweepOpen">sweep</button></div>
   <div id="placing"><span id="placingTxt">tap a time for bus</span><button id="placingX">cancel</button></div>
 </div>
@@ -314,7 +373,27 @@ function pad(n){ return (n < 10 ? "0" : "") + n; }
 function hm(m){ m = ((Math.round(m) % 1440) + 1440) % 1440; return pad(Math.floor(m / 60)) + ":" + pad(m % 60); }
 function dur(m){ m = Math.round(m); return m < 60 ? m + "m" : (m % 60 ? Math.floor(m / 60) + "h " + (m % 60) + "m" : (m / 60) + "h"); }
 function col(c){ return "var(--" + (COLORS.indexOf(c) >= 0 ? c : "taupe") + ")"; }
-function y(m){ return (m - D.startHour * 60) * PPM; }
+var N = wantCols();   // how many days side by side: 1 on a phone, 3 on iPad + Mac
+function wantCols(){ return window.innerWidth >= 700 ? 3 : 1; }
+function wide(){ return N > 1; }
+function sidebar(){ return window.innerWidth >= 1100; }
+function colOf(m){ return Math.max(0, Math.min(N - 1, Math.floor(m / 1440))); }
+function yIn(m, c){ return (m - c * 1440 - D.startHour * 60) * PPM; }
+function y(m){ return yIn(m, colOf(m)); }
+function colKey(c){ return dk(addDays(kd(D.key), c)); }
+function dayPrefix(m){ return wide() ? shortDay(colKey(colOf(m))) + " · " : ""; }
+// put a block (or the drop ghost) in the right column at the right height
+function placeEl(el, s, e, c, sub, subs){
+  var lo = c * 1440 + D.startHour * 60, hi = c * 1440 + D.endHour * 60;
+  var ss = Math.max(s, lo), ee = Math.min(e, hi);
+  el.style.top = yIn(ss, c) + "px"; el.style.height = Math.max(24, (ee - ss) * PPM - 3) + "px";
+  if (!wide() && sub === undefined) return;
+  sub = sub || 0; subs = subs || 1;
+  var w = 100 / N / subs;
+  el.style.left = "calc(" + (c * 100 / N + sub * w) + "% + " + (wide() ? 3 : (sub ? 2 : 0)) + "px)";
+  el.style.width = "calc(" + w + "% - " + (wide() ? 6 : (subs > 1 ? 2 : 0)) + "px)";
+  el.style.right = "auto";
+}
 function toast(t){ var e = $("toast"); e.textContent = t; e.classList.add("on"); clearTimeout(e._t); e._t = setTimeout(function(){ e.classList.remove("on"); }, 2800); }
 
 // replies from Scriptable
@@ -331,33 +410,48 @@ function savedItem(r){ items.forEach(function(it){ (it.checklist || []).forEach(
 function render(data){
   D = data; items = data.items.map(function(x){ return Object.assign({}, x, { checklist: (x.checklist || []).map(function(c){ return Object.assign({}, c); }) }); });
   $("dayName").textContent = data.dayName;
-  $("dateLbl").textContent = data.dateLabel; $("subLbl").textContent = data.sub || "";
+  $("dateLbl").textContent = data.dateLabel; $("subLbl").textContent = wide() ? "" : (data.sub || "");
   $("todayBtn").style.display = data.key === data.todayKey ? "none" : "";
   // week strip
   $("wdays").innerHTML = data.week.map(function(w){
-    return '<div class="wd' + (w.key === data.key ? " on" : "") + (w.dot ? " dot" : "") + (w.key === data.todayKey ? " today" : "") + '" data-k="' + w.key + '">' + w.dow + '<b>' + w.num + '</b><i></i></div>';
+    return '<div class="wd' + (w.key === data.key ? " on" : (w.key > data.key && w.key < data.colKeys[data.colKeys.length - 1] + "~" ? " inr" : "")) + (w.dot ? " dot" : "") + (w.key === data.todayKey ? " today" : "") + '" data-k="' + w.key + '">' + w.dow + '<b>' + w.num + '</b><i></i></div>';
   }).join("");
   drawChips();
   $("allday").innerHTML = data.allDay.map(function(a){ return '<div class="ad">' + esc(a) + '</div>'; }).join("");
+  $("colHeads").innerHTML = !wide() ? "" : data.cols.map(function(c){
+    return '<div class="chd' + (c.key === data.todayKey ? " today" : "") + '" data-k="' + c.key + '"><div class="dn">' + c.label + '<b>' + c.num + '</b></div><div class="pl">' + esc(c.sub) + '</div>' +
+      (c.allDay.length ? '<div class="ads">' + c.allDay.map(function(a){ return '<span>' + esc(a) + '</span>'; }).join("") + '</div>' : '') + '</div>';
+  }).join("");
   setPlacing(null);
   sweepBanner();
   layoutTop();
   // hour lines
-  var g = $("grid"); g.querySelectorAll(".hr,#now").forEach(function(e){ e.remove(); });
+  var g = $("grid"); g.querySelectorAll(".hr,#now,.vcol").forEach(function(e){ e.remove(); });
+  if (wide()) data.cols.forEach(function(c, i){
+    var v = document.createElement("div"); v.className = "vcol" + (c.key === data.todayKey ? " today" : "");
+    v.style.left = "calc(58px + " + i + " * (100% - 58px) / " + N + ")"; v.style.width = "calc((100% - 58px) / " + N + ")"; g.insertBefore(v, $("layer"));
+  });
   var hrs = data.endHour - data.startHour; g.style.height = (hrs * PPH + 24) + "px";
   for (var h = data.startHour; h <= data.endHour; h++){
     var d = document.createElement("div"); d.className = "hr"; d.style.top = ((h - data.startHour) * PPH + 12) + "px";
     d.innerHTML = '<span>' + (h % 24 === 0 && h > 0 ? "00:00" : pad(h % 24) + ":00") + '</span>'; g.insertBefore(d, $("layer"));
   }
   $("layer").style.top = "12px";
-  if (data.nowMin !== null && data.nowMin >= data.startHour * 60 && data.nowMin <= data.endHour * 60){
-    var n = document.createElement("div"); n.id = "now"; n.style.top = (y(data.nowMin) + 11) + "px"; g.appendChild(n);
+  var nowDay = data.nowMin === null ? null : data.nowMin - colOf(data.nowMin) * 1440;
+  if (nowDay !== null && nowDay >= data.startHour * 60 && nowDay <= data.endHour * 60){
+    var n = document.createElement("div"); n.id = "now"; n.style.top = (y(data.nowMin) + 11) + "px";
+    if (wide()){ var nc = colOf(data.nowMin); n.style.left = "calc(58px + " + nc + " * (100% - 58px) / " + N + ")"; n.style.right = "auto"; n.style.width = "calc((100% - 58px) / " + N + ")"; }
+    g.appendChild(n);
   }
   draw(); drawTray();
-  var target = data.nowMin !== null ? data.nowMin - 50 : (items.length ? Math.min.apply(null, items.map(function(i){ return i.start; })) - 20 : 8 * 60);
-  $("scroll").scrollTop = Math.max(0, y(target));
+  var firstOf = items.filter(function(i){ return i.start >= 0 && i.start < 1440 * N; }).map(function(i){ return i.start - colOf(i.start) * 1440; });
+  var target = nowDay !== null ? nowDay - 50 : (firstOf.length ? Math.min.apply(null, firstOf) - 20 : 8 * 60);
+  $("scroll").scrollTop = Math.max(0, yIn(target, 0));
 }
-function layoutTop(){ $("scroll").style.top = $("top").offsetHeight + "px"; }
+function layoutTop(){
+  var sc = $("scroll"); sc.style.top = $("top").offsetHeight + "px";
+  $("colHeads").style.marginRight = (12 + sc.offsetWidth - sc.clientWidth) + "px";   // line up with the grid under it
+}
 function drawChips(){
   var h = "";
   if (D.nowMin !== null) h += '<div class="chip late" data-late="1">' + svg("clock") + 'running late? +15</div>';
@@ -377,21 +471,23 @@ function layout(list){
 function editable(it){ return it.kind === "block" || it.kind === "todo"; }
 function draw(){
   var L = $("layer"); L.querySelectorAll(".b").forEach(function(e){ e.remove(); });
-  var lo = D.startHour * 60, hi = D.endHour * 60;
-  var vis = items.filter(function(it){ return it.end > lo && it.start < hi; });
-  layout(vis);
-  vis.forEach(function(it){
-    var s = Math.max(it.start, lo), e = Math.min(it.end, hi), hpx = Math.max(24, (e - s) * PPM - 3);
+  var segs = [];
+  items.forEach(function(it){
+    for (var c = 0; c < N; c++){
+      var lo = c * 1440 + D.startHour * 60, hi = c * 1440 + D.endHour * 60;
+      if (it.end > lo && it.start < hi) segs.push({ it: it, c: c, start: Math.max(it.start, lo), end: Math.min(it.end, hi), cont: it.start < lo });
+    }
+  });
+  layout(segs);
+  segs.forEach(function(seg){
+    var it = seg.it, s = seg.start, e = seg.end, hpx = Math.max(24, (e - s) * PPM - 3);
     var el = document.createElement("div");
     var short = hpx < 46;
-    el.className = "b " + it.kind + (it.done ? " isdone" : "") + (D.nowMin !== null && it.end <= D.nowMin ? " past" : "") + (short ? " short" : "");
-    var w = 100 / it._n;
-    el.style.left = "calc(" + (it._c * w) + "% + " + (it._c ? 2 : 0) + "px)";
-    el.style.width = "calc(" + w + "% - " + (it._n > 1 ? 2 : 0) + "px)";
-    el.style.top = y(s) + "px"; el.style.height = hpx + "px";
+    el.className = "b " + it.kind + (it.done ? " isdone" : "") + (D.nowMin !== null && it.end <= D.nowMin ? " past" : "") + (short ? " short" : "") + (seg.cont ? " cont" : "");
+    placeEl(el, s, e, seg.c, seg._c, seg._n);
     el.style.background = col(it.color);
     var icon = it.kind === "todo" ? (it.done ? "check" : "circle") : it.icon;
-    var html = '<div class="t">' + svg(icon) + '<span class="nm">' + esc(it.title) + '</span><span class="tm">' + hm(it.start) + (it._n > 1 ? "" : " – " + hm(it.end)) + '</span></div>';
+    var html = '<div class="t">' + svg(icon) + '<span class="nm">' + esc(it.title) + '</span><span class="tm">' + hm(it.start) + (seg._n > 1 || (wide() && hpx < 46) ? "" : " – " + hm(it.end)) + '</span></div>';
     if (it.meta) html += '<div class="m">' + esc(it.meta) + '</div>';
     var ck = it.checklist || [];
     if (ck.length && !short){
@@ -421,10 +517,10 @@ function currentBlock(){
 // ---------- tray ----------
 function drawTray(){
   var n = D.tray.length;
-  $("trayHead").innerHTML = (n ? n + " to-do" + (n === 1 ? "" : "s") + " to fit in" : "no to-dos waiting") + '<small>' + (n ? ($("tray").classList.contains("open") ? "hold one and drag it into a gap" : "tap to open") : "nice") + '</small>';
+  $("trayHead").innerHTML = (n ? n + " to-do" + (n === 1 ? "" : "s") + " to fit in" : "no to-dos waiting") + '<small>' + (n ? (sidebar() ? "drag one onto a time" : $("tray").classList.contains("open") ? "hold one and drag it into a gap" : "tap to open") : "nice") + '</small>';
   $("trayList").innerHTML = D.tray.map(function(t, i){ return '<div class="ti" data-t="' + i + '"><span class="grip">' + svg("circle") + '</span>' + esc(t.title) + (t.meta ? '<small>' + esc(t.meta) + '</small>' : '') + '</div>'; }).join("");
 }
-$("trayHead").onclick = function(){ if (!D.tray.length) return; $("tray").classList.toggle("open"); drawTray(); };
+$("trayHead").onclick = function(){ if (!D.tray.length || sidebar()) return; $("tray").classList.toggle("open"); drawTray(); };
 $("trayX").onclick = function(){ $("tray").classList.remove("open"); drawTray(); };
 $("focusBtn").onclick = function(){ var c = currentBlock(); if (c) openFocus(c); };
 
@@ -441,12 +537,13 @@ function startTrayDrag(x, yy){
   $("tray").classList.remove("open");
   moveTrayDrag(x, yy);
 }
-function gridMinAt(clientY){ var r = $("layer").getBoundingClientRect(); return D.startHour * 60 + (clientY - r.top) / PPM; }
+function gridColAt(clientX){ var r = $("layer").getBoundingClientRect(); return wide() ? Math.max(0, Math.min(N - 1, Math.floor((clientX - r.left) / (r.width / N)))) : 0; }
+function gridMinAt(clientY, clientX){ var r = $("layer").getBoundingClientRect(); return gridColAt(clientX) * 1440 + D.startHour * 60 + (clientY - r.top) / PPM; }
 function moveTrayDrag(x, yy){
   var tag = $("dragTag"); tag.style.left = (x - 40) + "px"; tag.style.top = (yy - 22) + "px";
   var sTop = $("scroll").getBoundingClientRect().top;
   var gh = $("ghost");
-  if (yy > sTop){ var m = Math.floor(gridMinAt(yy) / SNAP) * SNAP; gh.style.display = "block"; gh.style.top = y(m) + "px"; gh.style.height = (60 * PPM - 3) + "px"; gh.textContent = hm(m) + " – " + hm(m + 60); tdrag.min = m; }
+  if (yy > sTop && x > $("layer").getBoundingClientRect().left - 40){ var m = Math.floor(gridMinAt(yy, x) / SNAP) * SNAP; gh.style.display = "block"; placeEl(gh, m, m + 60, colOf(m), wide() ? 0 : undefined, 1); gh.textContent = dayPrefix(m) + hm(m) + " – " + hm(m + 60); tdrag.min = m; }
   else { gh.style.display = "none"; tdrag.min = null; }
 }
 
@@ -469,7 +566,8 @@ $("chips").addEventListener("click", function(ev){
   setPlacing(placing && placing.preset === p ? null : { preset: p });
 });
 function confirmLate(){
-  var later = items.filter(function(i){ return editable(i) && !i.done && i.end > D.nowMin; });
+  var dayEnd = (colOf(D.nowMin) + 1) * 1440;
+  var later = items.filter(function(i){ return editable(i) && !i.done && i.end > D.nowMin && i.start < dayEnd; });
   if (!later.length){ toast("nothing left to push back"); return true; }
   later = later.filter(function(i){ return i.id.indexOf("temp") !== 0; });
   later.forEach(function(i){ if (i.start >= D.nowMin - 5) i.start += 15; i.end += 15; });
@@ -481,7 +579,8 @@ function confirmLate(){
 // ---------- tap the grid ----------
 $("layer").addEventListener("click", function(ev){
   if (ev.target !== $("layer")) return;
-  var m = Math.floor(gridMinAt(ev.clientY) / SNAP) * SNAP;
+  var m = Math.floor(gridMinAt(ev.clientY, ev.clientX) / SNAP) * SNAP;
+  ANCHOR = { left: ev.clientX, right: ev.clientX, top: ev.clientY - 20, bottom: ev.clientY };
   if (placing){
     var p = placing; setPlacing(null);
     if (p.preset) addFromPreset(p.preset, m);
@@ -511,9 +610,11 @@ function openAdd(start){
   $("addName").value = "";
   $("addPresets").innerHTML = D.presets.map(function(p, i){ return '<button class="pill" data-p="' + i + '"><span style="color:' + col(p.color) + '">' + svg(p.icon) + '</span>' + esc(p.name) + '</button>'; }).join("");
   drawAdd(); openSheet("sAdd");
+  if (wide() && window.matchMedia("(hover:hover)").matches) setTimeout(function(){ $("addName").focus(); }, 60);   // Mac: just start typing
 }
+$("addName").onkeydown = function(e){ if (e.key === "Enter"){ e.preventDefault(); $("addOk").onclick(); } };
 function drawAdd(){
-  $("addTitle").textContent = "new block · " + hm(A.start) + " – " + hm(A.start + A.len);
+  $("addTitle").textContent = "new block · " + dayPrefix(A.start) + hm(A.start) + " – " + hm(A.start + A.len);
   $("addLens").innerHTML = LENS.map(function(l){ return '<button class="pill' + (l === A.len ? " on" : "") + '" data-l="' + l + '">' + dur(l) + '</button>'; }).join("");
   $("addColors").innerHTML = COLORS.map(function(c){ return '<div class="' + (c === A.color ? "on" : "") + '" data-c="' + c + '" style="background:' + col(c) + '"></div>'; }).join("");
   $("addIcons").innerHTML = ICON_CHOICES.map(function(n){ return '<div class="' + (n === A.icon ? "on" : "") + '" data-i="' + n + '">' + svg(n) + '</div>'; }).join("");
@@ -551,7 +652,7 @@ function openEdit(it){
   drawEdit(); openSheet("sEdit");
 }
 function drawEdit(){
-  $("eTime").textContent = hm(E.start) + " – " + hm(E.end) + " · " + dur(E.end - E.start);
+  $("eTime").textContent = dayPrefix(E.start) + hm(E.start) + " – " + hm(E.end) + " · " + dur(E.end - E.start);
   if (E.it.kind !== "block") return;
   $("eCk").innerHTML = (E.it.checklist || []).map(function(c, i){ return '<div class="c' + (c.checked ? " y" : "") + '"><div class="bx" data-t="' + i + '">' + (c.checked ? svg("check") : "") + '</div><span data-t="' + i + '">' + esc(c.text) + '</span><button class="x" data-x="' + i + '">' + svg("x") + '</button></div>'; }).join("") || '<div class="sub" style="margin:4px 0;text-align:left">no steps yet</div>';
   $("eColors").innerHTML = COLORS.map(function(c){ return '<div class="' + (c === E.color ? "on" : "") + '" data-c="' + c + '" style="background:' + col(c) + '"></div>'; }).join("");
@@ -614,7 +715,7 @@ function hookBlock(el){
     var t = ev.touches[0], it = el._it;
     if (ev.target.closest(".ck")){ drag = { tapCk: ev.target.closest(".ck"), el: el, y0: t.clientY, moved: false }; return; }
     var resize = ev.target.classList.contains("h");
-    drag = { el: el, it: it, y0: t.clientY, s0: it.start, e0: it.end, mode: resize ? "resize" : null, moved: false, timer: null };
+    drag = { el: el, it: it, x0: t.clientX, y0: t.clientY, s0: it.start, e0: it.end, mode: resize ? "resize" : null, moved: false, timer: null };
     if (!resize) drag.timer = setTimeout(function(){ if (drag && !drag.moved){ drag.mode = "move"; el.classList.add("drag"); } }, 320);
     else el.classList.add("drag");
   }, { passive: true });
@@ -625,6 +726,7 @@ function hookBlock(el){
     if (ck){ toggleItem(el._it, +ck.dataset.c); return; }
     if (placing){ toast("tap an empty gap for it"); return; }
     if (el._it.id.indexOf("temp") === 0){ toast("still saving…"); return; }
+    ANCHOR = el.getBoundingClientRect();
     openEdit(el._it);
   });
 }
@@ -639,11 +741,7 @@ document.addEventListener("touchmove", function(ev){
   if (drag.tapCk){ if (Math.abs(dy) > 8) drag = null; return; }
   if (!drag.mode){ if (Math.abs(dy) > 8){ drag.moved = true; clearTimeout(drag.timer); drag = null; } return; }
   ev.preventDefault();
-  var dm = Math.round(dy / PPM / SNAP) * SNAP, it = drag.it;
-  if (drag.mode === "move"){ it.start = drag.s0 + dm; it.end = drag.e0 + dm; } else it.end = Math.max(drag.s0 + 15, drag.e0 + dm);
-  drag.el.style.top = y(Math.max(it.start, D.startHour * 60)) + "px";
-  drag.el.style.height = Math.max(24, (Math.min(it.end, D.endHour * 60) - Math.max(it.start, D.startHour * 60)) * PPM - 3) + "px";
-  var tm = drag.el.querySelector(".tm"); if (tm) tm.textContent = hm(it.start) + " – " + hm(it.end);
+  moveDragged(drag, t.clientX, dy);
 }, { passive: false });
 document.addEventListener("touchend", function(){
   if (tdrag){
@@ -666,6 +764,19 @@ document.addEventListener("touchend", function(){
     send({ type: "update", id: dd.it.id, kind: dd.it.kind, start: dd.it.start, end: dd.it.end });
   }
 });
+// shared by touch + mouse: up/down changes the time, left/right (iPad + Mac) changes the day
+function moveDragged(d, x, dy){
+  var dm = Math.round(dy / PPM / SNAP) * SNAP, it = d.it;
+  if (d.mode === "move"){
+    var dc = 0;
+    if (wide()){ var cw = $("layer").getBoundingClientRect().width / N, c0 = colOf(d.s0); dc = Math.max(-c0, Math.min(N - 1 - c0, Math.round((x - d.x0) / cw))); }
+    it.start = d.s0 + dm + dc * 1440; it.end = d.e0 + dm + dc * 1440;
+  } else it.end = Math.max(d.s0 + 15, d.e0 + dm);
+  var c = colOf(it.start);
+  if (wide()) placeEl(d.el, it.start, it.end, c, 0, 1);
+  else placeEl(d.el, it.start, it.end, 0);
+  var tm = d.el.querySelector(".tm"); if (tm) tm.textContent = dayPrefix(it.start) + hm(it.start) + " – " + hm(it.end);
+}
 // --- mouse (Mac): press + drag moves straight away, the little bar stretches ---
 var mdrag = null, mtd = null, lastTouch = 0;
 document.addEventListener("touchstart", function(){ lastTouch = Date.now(); }, { passive: true, capture: true });
@@ -675,7 +786,7 @@ document.addEventListener("mousedown", function(ev){
   if (ti){ mtd = { row: ti, todo: D.tray[+ti.dataset.t], x0: ev.clientX, y0: ev.clientY, on: false }; ev.preventDefault(); return; }
   var el = ev.target.closest(".b"); if (!el || !el._it || !editable(el._it) || ev.target.closest(".ck")) return;
   var resize = ev.target.classList.contains("h");
-  mdrag = { el: el, it: el._it, y0: ev.clientY, s0: el._it.start, e0: el._it.end, mode: resize ? "resize" : null };
+  mdrag = { el: el, it: el._it, x0: ev.clientX, y0: ev.clientY, s0: el._it.start, e0: el._it.end, mode: resize ? "resize" : null };
   if (resize) el.classList.add("drag");
   ev.preventDefault();
 });
@@ -687,12 +798,8 @@ document.addEventListener("mousemove", function(ev){
   }
   if (!mdrag) return;
   var dy = ev.clientY - mdrag.y0;
-  if (!mdrag.mode){ if (Math.abs(dy) < 4) return; mdrag.mode = "move"; mdrag.el.classList.add("drag"); }
-  var dm = Math.round(dy / PPM / SNAP) * SNAP, it = mdrag.it;
-  if (mdrag.mode === "move"){ it.start = mdrag.s0 + dm; it.end = mdrag.e0 + dm; } else it.end = Math.max(mdrag.s0 + 15, mdrag.e0 + dm);
-  mdrag.el.style.top = y(Math.max(it.start, D.startHour * 60)) + "px";
-  mdrag.el.style.height = Math.max(24, (Math.min(it.end, D.endHour * 60) - Math.max(it.start, D.startHour * 60)) * PPM - 3) + "px";
-  var tm = mdrag.el.querySelector(".tm"); if (tm) tm.textContent = hm(it.start) + " – " + hm(it.end);
+  if (!mdrag.mode){ if (Math.abs(dy) < 4 && Math.abs(ev.clientX - mdrag.x0) < 4) return; mdrag.mode = "move"; mdrag.el.classList.add("drag"); }
+  moveDragged(mdrag, ev.clientX, dy);
 });
 document.addEventListener("mouseup", function(){
   if (mtd){
@@ -721,6 +828,7 @@ document.addEventListener("keydown", function(e){
   else if (e.key === "ArrowLeft") send({ type: "day", key: D.prevDayKey });
   else if (e.key === "ArrowRight") send({ type: "day", key: D.next7[0].key });
   else if (e.key === "t") send({ type: "day", key: D.todayKey });
+  else if (e.key === "n" && !document.querySelector(".sheet.on")){ ANCHOR = null; openAdd(D.nowMin !== null ? Math.ceil(D.nowMin / 15) * 15 : 9 * 60); }
 });
 $("trayList").addEventListener("click", function(ev){
   if (Date.now() - lastTouch > 800) return;   // mouse clicks are handled on mouseup
@@ -734,6 +842,9 @@ $("wdays").onclick = function(ev){ var d = ev.target.closest(".wd"); if (!d || d
 $("wkPrev").onclick = function(){ send({ type: "day", key: D.prevWeekKey }); };
 $("wkNext").onclick = function(){ send({ type: "day", key: D.nextWeekKey }); };
 $("todayBtn").onclick = function(){ send({ type: "day", key: D.todayKey }); };
+$("dPrev").onclick = function(){ send({ type: "day", key: D.prevDayKey }); };
+$("dNext").onclick = function(){ send({ type: "day", key: D.next7[0].key }); };
+$("colHeads").onclick = function(ev){ var c = ev.target.closest(".chd"); if (c && c.dataset.k !== D.key) send({ type: "day", key: c.dataset.k }); };
 var sx = null;
 $("wdays").addEventListener("touchstart", function(e){ sx = e.touches[0].clientX; }, { passive: true });
 $("wdays").addEventListener("touchend", function(e){ if (sx === null) return; var dx = e.changedTouches[0].clientX - sx; sx = null; if (Math.abs(dx) > 60) send({ type: "day", key: dx < 0 ? D.nextWeekKey : D.prevWeekKey }); });
@@ -778,7 +889,7 @@ function openTemplates(){
   };
 }
 function saveTemplate(){
-  var blocks = items.filter(function(i){ return i.kind === "block"; });
+  var blocks = items.filter(function(i){ return i.kind === "block" && i.start >= 0 && i.start < 1440; });
   if (!blocks.length){ toast("add some blocks first"); return; }
   var guess = /^(sat|sun)/.test(D.dateLabel) || /^(saturday|sunday)/.test(D.dayName) ? "weekend" : "uni day";
   listSheet("save as a template", blocks.length + " blocks · use it on any day from •••", '<input class="inp" id="tplName" autocomplete="off" placeholder="e.g. uni day">', function(){}, '<button class="btn main" id="tplSave">save</button>');
@@ -845,6 +956,7 @@ $("pDel").onclick = function(){ D.presets.splice(P.i, 1); closeSheets(); drawChi
 function sweepItems(){
   var out = [];
   items.forEach(function(it){
+    if (it.start >= 1440) return;   // only today's things
     if (it.kind === "todo" && !it.done) out.push({ kind: "todo", id: it.id, text: it.title, on: true });
     if (it.kind === "block") (it.checklist || []).forEach(function(c){ if (!c.checked) out.push({ kind: "step", id: c.id, text: c.text, from: it.title, on: true }); });
   });
@@ -887,9 +999,9 @@ function drawFocus(){
 }
 function tickFocus(){
   if (!focusIt) return;
-  var now = new Date(), nm = now.getHours() * 60 + now.getMinutes() + now.getSeconds() / 60 + (D.key === D.todayKey ? 0 : 0);
+  var nm = (Date.now() - s0Of(D.key)) / 60000;
   var total = focusIt.end - focusIt.start, left = Math.max(0, focusIt.end - nm), before = focusIt.start - nm;
-  if (D.key !== D.todayKey || before > 0){ $("fLeft").textContent = dur(total); $("fLeftL").textContent = before > 0 && D.key === D.todayKey ? "starts in " + dur(Math.ceil(before)) : "planned"; $("fArc").style.strokeDashoffset = 0; return; }
+  if (before > 0 || nm > focusIt.end + 720){ $("fLeft").textContent = dur(total); $("fLeftL").textContent = before > 0 && before < 720 ? "starts in " + dur(Math.ceil(before)) : "planned"; $("fArc").style.strokeDashoffset = 0; return; }
   $("fLeft").textContent = left >= 60 ? dur(Math.ceil(left)) : Math.floor(left) + ":" + pad(Math.floor((left % 1) * 60));
   $("fLeftL").textContent = left > 0 ? "left" : "time's up";
   $("fArc").style.strokeDashoffset = 578 * (1 - left / total);
@@ -900,20 +1012,36 @@ $("fMore").onclick = function(){ var it = focusIt; it.end += 15; drawFocus(); dr
 $("fFinish").onclick = function(){
   var it = focusIt;
   if (it.kind === "todo"){ it.done = true; send({ type: "done", id: it.id, title: it.title }); }
-  else if (D.nowMin !== null && D.key === D.todayKey){ var n = new Date(); var nm = n.getHours() * 60 + n.getMinutes(); if (nm < it.end && nm > it.start){ it.end = Math.ceil(nm / 5) * 5; send({ type: "update", id: it.id, kind: it.kind, start: it.start, end: it.end }); } }
+  else if (D.nowMin !== null){ var nm = Math.round((Date.now() - s0Of(D.key)) / 60000); if (nm < it.end && nm > it.start){ it.end = Math.ceil(nm / 5) * 5; send({ type: "update", id: it.id, kind: it.kind, start: it.start, end: it.end }); } }
   $("fClose").onclick(); draw(); toast("nice one 🤍");
 };
 
 // ---------- sheets ----------
-function openSheet(id){ document.querySelectorAll(".sheet").forEach(function(s){ if (s.id !== id) s.classList.remove("on"); }); $(id).classList.add("on"); $("shade").classList.add("on"); }
+var ANCHOR = null;
+function openSheet(id){
+  document.querySelectorAll(".sheet").forEach(function(s){ if (s.id !== id) s.classList.remove("on"); });
+  var sh = $(id), a = (id === "sAdd" || id === "sEdit") && wide() ? ANCHOR : null;
+  sh.classList.toggle("pop", !!a); sh.style.left = sh.style.top = "";
+  if (a){
+    var W = Math.min(420, window.innerWidth - 32), H = Math.min(sh.scrollHeight || 520, window.innerHeight * 0.86);
+    var left = a.right + 12 + W < window.innerWidth - 12 ? a.right + 12 : Math.max(12, a.left - 12 - W);
+    var top = Math.max(12, Math.min(a.top, window.innerHeight - H - 12));
+    sh.style.left = left + "px"; sh.style.top = top + "px";
+  }
+  ANCHOR = null;
+  sh.classList.add("on"); $("shade").classList.toggle("light", !!a); $("shade").classList.add("on");
+}
 function closeSheets(keepShade){ document.querySelectorAll(".sheet").forEach(function(s){ s.classList.remove("on"); }); if (!keepShade) $("shade").classList.remove("on"); if (document.activeElement) document.activeElement.blur(); }
 function hookClose(){ document.querySelectorAll("[data-close]").forEach(function(b){ b.onclick = function(){ closeSheets(); }; }); }
 $("shade").onclick = function(){ closeSheets(); };
 hookClose();
 
 // static icons
-$("menuBtn").innerHTML = svg("ellipsis"); $("wkPrev").innerHTML = svg("chevron-left"); $("wkNext").innerHTML = svg("chevron-right"); $("fClose").innerHTML = svg("x");
-window.addEventListener("resize", layoutTop);
+$("menuBtn").innerHTML = svg("ellipsis"); $("dPrev").innerHTML = svg("chevron-left"); $("dNext").innerHTML = svg("chevron-right"); $("wkPrev").innerHTML = svg("chevron-left"); $("wkNext").innerHTML = svg("chevron-right"); $("fClose").innerHTML = svg("x");
+window.addEventListener("resize", function(){
+  layoutTop();
+  clearTimeout(window._rz); window._rz = setTimeout(function(){ var n = wantCols(); if (n !== N && CUR){ N = n; send({ type: "day", key: CUR.key }); } else if (D) drawTray(); }, 250);
+});
 window.onerror = function(m){ toast("⚠︎ " + m); };
 // ================= data: talks to /api/planner (which talks to Notion) =================
 var API = "/api/planner";
@@ -990,7 +1118,8 @@ function urgencyShort(u){ var s = (u || "").toLowerCase(); var r = /first|1st/.t
 var CUR = null;      // { key, raw, items, allDay, dots, tray }
 function loadDay(key){
   var mon = mondayOf(key), today = todayKey();
-  return api("load", { from: dk(addDays(mon, -1)), to: dk(addDays(mon, 7)), dayFrom: dk(addDays(kd(key), -1)), dayTo: dk(addDays(kd(key), 1)),
+  var to = dk(addDays(mon, 7)), lastDay = dk(addDays(kd(key), N)); if (lastDay > to) to = lastDay;
+  return api("load", { from: dk(addDays(mon, -1)), to: to, dayFrom: dk(addDays(kd(key), -1)), dayTo: lastDay,
     todayKey: today, withOpen: key >= today, withSettings: true })
     .then(function(raw){
       if (raw.settings !== undefined) applySettings(raw.settings);
@@ -998,14 +1127,16 @@ function loadDay(key){
     });
 }
 function buildDay(key, raw){
-  var s0 = s0Of(key), s1 = s0Of(dk(addDays(kd(key), 1)));
+  var s0 = s0Of(key), endKey = dk(addDays(kd(key), N)), s1 = s0Of(endKey);
   var toMin = function(ts){ return Math.round((ts - s0) / 60000); };
-  var items = [], allDay = [], dots = {};
+  var items = [], allDayBy = {}, dots = {};
+  var inRange = function(k){ return k >= key && k < endKey; };
+  var addAD = function(k, t){ if (inRange(k)) (allDayBy[k] = allDayBy[k] || []).push(t); };
   (raw.blocks || []).forEach(function(b){
     var s = parseND(b.start); if (!s) return;
     var all = /^\d{4}-\d\d-\d\d$/.test(b.start), e = all ? addDays(s, 1) : (b.end ? parseND(b.end) : new Date(s.getTime() + 3600000));
     for (var x = new Date(s.getFullYear(), s.getMonth(), s.getDate()); x < e; x = addDays(x, 1)) dots[dk(x)] = true;
-    if (all){ if (dk(s) === key) allDay.push(b.title); return; }
+    if (all){ addAD(dk(s), b.title); return; }
     if (e.getTime() <= s0 || s.getTime() >= s1) return;
     var pr = presetByName(b.presetName) || presetById(b.presetName), look = guessLook(b.title);
     items.push({ id: b.id, kind: "block", title: b.title, start: toMin(s.getTime()), end: toMin(e.getTime()), preset: (pr || look.preset || {}).id || null,
@@ -1013,15 +1144,15 @@ function buildDay(key, raw){
   });
   (raw.classes || []).forEach(function(c){
     var s = parseND(c.start); if (!s) return;
-    if (c.deadline || /^\d{4}-\d\d-\d\d$/.test(c.start)){ if (dk(s) === key) allDay.push(c.deadline ? "due: " + c.title : c.title); return; }
-    if (dk(s) !== key) return;
+    if (c.deadline || /^\d{4}-\d\d-\d\d$/.test(c.start)){ addAD(dk(s), c.deadline ? "due: " + c.title : c.title); return; }
+    if (!inRange(dk(s))) return;
     if (c.lecture && SETTINGS.hideLectures) return;
     var e = c.end ? parseND(c.end) : new Date(s.getTime() + 3600000);
     items.push({ id: c.id, kind: "class", title: c.title, meta: [c.type, c.location].filter(Boolean).join(" · "), start: toMin(s.getTime()), end: toMin(e.getTime()), icon: "graduation-cap", color: "mauve", lecture: c.lecture });
   });
   (raw.shared || []).forEach(function(ev){
     var s = parseND(ev.start); if (!s) return;
-    if (/^\d{4}-\d\d-\d\d$/.test(ev.start)){ if (dk(s) === key) allDay.push(ev.title); return; }
+    if (/^\d{4}-\d\d-\d\d$/.test(ev.start)){ addAD(dk(s), ev.title); return; }
     var e = ev.end ? parseND(ev.end) : new Date(s.getTime() + 3600000);
     if (e.getTime() <= s0 || s.getTime() >= s1) return;
     items.push({ id: ev.id, kind: "event", title: ev.title, meta: ev.location || "", start: toMin(s.getTime()), end: toMin(e.getTime()), icon: "calendar", color: "sage" });
@@ -1037,16 +1168,24 @@ function buildDay(key, raw){
     var d = t.dateKey ? kd(t.dateKey) : null;
     return { id: t.id, title: t.title, meta: t.dateKey && t.dateKey < today ? "since " + d.getDate() + " " + MN[d.getMonth()].slice(0, 3) : urgencyShort(t.urgency) };
   });
-  CUR = { key: key, raw: raw, items: items, allDay: allDay, dots: Object.keys(dots), tray: tray };
+  CUR = { key: key, raw: raw, items: items, allDay: allDayBy[key] || [], allDayBy: allDayBy, dots: Object.keys(dots), tray: tray };
   return CUR;
 }
 function screenData(d){
   var today = todayKey(), date = kd(d.key), now = new Date();
-  var nowMin = d.key === today ? now.getHours() * 60 + now.getMinutes() : null;
-  var vis = d.items.filter(function(i){ return i.end > 0 && i.start < 1440; });
-  var first = Math.min.apply(null, [7 * 60].concat(vis.filter(function(i){ return i.start >= 0; }).map(function(i){ return i.start; })));
-  var planned = d.items.filter(function(i){ return i.kind === "block" || i.kind === "todo"; }).reduce(function(s, i){ return s + Math.max(0, Math.min(i.end, 1440) - Math.max(i.start, first)); }, 0);
-  var ends = d.items.filter(function(i){ return i.kind !== "event" && i.end <= 1440; }).map(function(i){ return i.end; });
+  var tIdx = Math.round((s0Of(today) - s0Of(d.key)) / 86400000);
+  var nowMin = tIdx >= 0 && tIdx < N ? tIdx * 1440 + now.getHours() * 60 + now.getMinutes() : null;
+  var vis = d.items.filter(function(i){ return i.end > 0 && i.start < 1440 * N; });
+  var first = Math.min.apply(null, [7 * 60].concat(vis.filter(function(i){ return i.start >= 0; }).map(function(i){ return i.start % 1440; })));
+  var cols = [];
+  for (var ci = 0; ci < N; ci++){
+    var ck = dk(addDays(date, ci)), cd = kd(ck), lo0 = ci * 1440, hi0 = lo0 + 1440;
+    var pl = d.items.filter(function(i){ return (i.kind === "block" || i.kind === "todo") && i.end > lo0 && i.start < hi0; }).reduce(function(s, i){ return s + Math.min(i.end, hi0) - Math.max(i.start, lo0); }, 0);
+    var crel = ck === today ? "today" : ck === dk(addDays(now, 1)) ? "tomorrow" : ck === dk(addDays(now, -1)) ? "yesterday" : DN[cd.getDay()].slice(0, 3);
+    cols.push({ key: ck, label: crel, num: cd.getDate(), sub: pl ? dur(pl) + " planned" : (ck >= today ? "nothing planned" : ""), allDay: (d.allDayBy || {})[ck] || [] });
+  }
+  var planned = d.items.filter(function(i){ return (i.kind === "block" || i.kind === "todo") && i.start < 1440; }).reduce(function(s, i){ return s + Math.max(0, Math.min(i.end, 1440) - Math.max(i.start, first)); }, 0);
+  var ends = d.items.filter(function(i){ return i.kind !== "event" && i.end <= 1440 && i.end > 0; }).map(function(i){ return i.end; });
   var lastEnd = ends.length ? Math.max.apply(null, ends) : null;
   var rel = d.key === today ? "today" : d.key === dk(addDays(new Date(), 1)) ? "tomorrow" : d.key === dk(addDays(new Date(), -1)) ? "yesterday" : "";
   var mon = mondayOf(d.key), week = [];
@@ -1056,7 +1195,9 @@ function screenData(d){
   var next7 = []; for (var j = 1; j <= 7; j++){ var kk = dk(addDays(date, j)); next7.push({ key: kk, label: (j === 1 ? "tomorrow · " : "") + shortDay(kk) }); }
   return {
     key: d.key, todayKey: today, nowMin: nowMin, startHour: Math.floor(first / 60), endHour: 24,
-    dayName: rel || DN[date.getDay()], dateLabel: (rel ? DN[date.getDay()] + " " : "") + date.getDate() + " " + MN[date.getMonth()], sub: sub,
+    dayName: rel || DN[date.getDay()],
+    dateLabel: N > 1 ? shortDay(d.key) + " – " + shortDay(dk(addDays(date, N - 1))) : (rel ? DN[date.getDay()] + " " : "") + date.getDate() + " " + MN[date.getMonth()], sub: sub,
+    cols: cols, colKeys: cols.map(function(c){ return c.key; }),
     week: week, prevWeekKey: dk(addDays(date, -7)), nextWeekKey: dk(addDays(date, 7)), prevDayKey: dk(addDays(date, -1)), next7: next7,
     items: d.items, allDay: d.allDay, tray: d.tray, presets: SETTINGS.presets, templates: SETTINGS.templates, swept: !!SETTINGS.swept[d.key], hideLectures: SETTINGS.hideLectures
   };
@@ -1101,7 +1242,8 @@ function handle(a){
     case "done":
       return api("todoDone", { id: a.id, title: a.title, dateKey: isToday ? key : null, which: "morning" }).then(function(r){ toast(r.habit ? "done ✓ · " + r.habit + " habit ticked too" : "done ✓ nice one"); });
     case "check":
-      return api("check", { id: a.id, checked: a.checked, text: a.text, block: a.block, dateKey: isToday && a.checked ? key : null, which: which(a.start) }).then(function(r){ if (r.habit) toast(r.habit + " habit ticked too ✓"); });
+      var stepDay = dk(addDays(kd(key), Math.floor(a.start / 1440)));
+      return api("check", { id: a.id, checked: a.checked, text: a.text, block: a.block, dateKey: stepDay === todayKey() && a.checked ? stepDay : null, which: which(((a.start % 1440) + 1440) % 1440) }).then(function(r){ if (r.habit) toast(r.habit + " habit ticked too ✓"); });
     case "addItem": return api("addItem", { page: a.page, text: a.text }).then(function(r){ if (r.id) savedItem({ temp: a.temp, id: r.id }); });
     case "delItem": return api("delItem", { id: a.id });
     case "late":
@@ -1127,10 +1269,11 @@ function handle(a){
     case "repeat": {
       var bl = items.filter(function(i){ return i.id === a.id; })[0];
       if (!bl){ toast("couldn't find that block — try again"); return; }
-      var base = kd(a.key), keys = [];
+      var off = Math.floor(bl.start / 1440); bl = Object.assign({}, bl, { start: bl.start - off * 1440, end: bl.end - off * 1440 });
+      var base = addDays(kd(a.key), off), keys = [];
       if (a.how === "tomorrow") keys.push(dk(addDays(base, 1)));
       if (a.how === "week") for (var i = 1; i <= 7; i++) keys.push(dk(addDays(base, i)));
-      if (a.how === "weekdays"){ var mon = mondayOf(a.key); for (var j = 0; j < 5; j++){ var k = dk(addDays(mon, j)); if (k > a.key) keys.push(k); } }
+      if (a.how === "weekdays"){ var bk = dk(base), mon = mondayOf(bk); for (var j = 0; j < 5; j++){ var k = dk(addDays(mon, j)); if (k > bk) keys.push(k); } }
       if (!keys.length){ toast("no weekdays left this week"); return; }
       return api("createMany", { blocks: keys.map(function(k){ return blockBody(k, bl); }) }).then(function(){ return reload(true); }).then(function(){ toast("repeated on " + keys.length + " day" + (keys.length === 1 ? "" : "s") + " ✓"); });
     }
