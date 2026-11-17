@@ -136,18 +136,25 @@ async function openTodos(todayKey) {
   });
 }
 
-// ---------- settings (presets, templates…) kept in a Notion page so every device matches ----------
+// ---------- settings (presets, templates…) so every device matches ----------
+// v2: kept as an undated row called "planner settings" INSIDE the planner database.
+// That always works, wherever the database lives in Notion, and needs no search.
+// (It never shows on the calendar because it has no date.)
 async function settingsPage(create) {
   if (MEM.settingsId) return MEM.settingsId;
-  const r = await notion("search", "POST", { query: SETTINGS_TITLE, filter: { property: "object", value: "page" }, page_size: 20 });
+  // 1) the row inside the planner database
+  const q = await notion(`databases/${DB.planner}/query`, "POST", { filter: { property: P.title, title: { equals: SETTINGS_TITLE } }, page_size: 5 });
+  const row = (q.results || []).find(p => !p.archived);
+  if (row) return (MEM.settingsId = row.id);
+  // 2) an older separate page called "planner settings", if there is one
+  const r = await notion("search", "POST", { query: SETTINGS_TITLE, filter: { property: "object", value: "page" }, page_size: 20 }).catch(() => ({ results: [] }));
   const hit = (r.results || []).find(p => !p.archived && firstTitle(p.properties || {}).trim().toLowerCase() === SETTINGS_TITLE);
   if (hit) return (MEM.settingsId = hit.id);
   if (!create) return null;
-  const db = await notion(`databases/${DB.planner}`);
-  if (!db.parent || db.parent.type !== "page_id") throw new Error("can't make the settings page — put your planner database on a normal Notion page first");
+  // 3) make the row
   const page = await notion("pages", "POST", {
-    parent: { page_id: db.parent.page_id }, icon: { type: "emoji", emoji: "⚙️" },
-    properties: { title: { title: rt(SETTINGS_TITLE) } },
+    parent: { database_id: DB.planner }, icon: { type: "emoji", emoji: "⚙️" },
+    properties: { [P.title]: { title: rt(SETTINGS_TITLE) } },
     children: [
       { object: "block", type: "paragraph", paragraph: { rich_text: rt("Your planner app keeps its presets and templates here. Leave this page alone 🤍") } },
       { object: "block", type: "code", code: { language: "json", rich_text: rt("{}") } }
