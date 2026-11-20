@@ -468,7 +468,7 @@ function layout(list){
   if (cur.length) groups.push(cur);
   groups.forEach(function(gr){ var cols = []; gr.forEach(function(it){ var c = 0; while (cols[c] > it.start) c++; cols[c] = it.end; it._c = c; }); gr.forEach(function(it){ it._n = cols.length; }); });
 }
-function editable(it){ return it.kind === "block" || it.kind === "todo"; }
+function editable(it){ return it.kind === "block" || it.kind === "todo" || it.kind === "event"; }
 function draw(){
   var L = $("layer"); L.querySelectorAll(".b").forEach(function(e){ e.remove(); });
   var segs = [];
@@ -645,7 +645,8 @@ function openEdit(it){
   var isBlock = it.kind === "block";
   $("eBlockOnly").style.display = isBlock ? "" : "none";
   $("eDoneRow").style.display = it.kind === "todo" && !it.done ? "" : "none";
-  $("eDel").textContent = it.kind === "todo" ? "unschedule" : "delete";
+  $("eDel").textContent = it.kind === "todo" ? "unschedule" : it.tt ? "remove from planner" : "delete";
+  $("eDel").style.display = it.kind === "event" ? "none" : "";
   $("eFocus").innerHTML = svg("play") + " focus";
   $("eRepeat").innerHTML = svg("repeat") + "repeat…";
   $("eAsPreset").innerHTML = svg("copy") + "save as preset";
@@ -688,7 +689,7 @@ $("eDel").onclick = function(){
   var it = E.it; items = items.filter(function(x){ return x !== it; });
   if (it.kind === "todo") D.tray.unshift({ id: it.id, title: it.title, meta: "" });
   draw(); drawTray(); closeSheets();
-  send({ type: "delete", id: it.id, kind: it.kind, title: it.title });
+  send({ type: "delete", id: it.id, kind: it.kind, title: it.title, tt: it.tt || null });
 };
 $("eDone").onclick = function(){ var it = E.it; it.done = true; draw(); closeSheets(); send({ type: "done", id: it.id, title: it.title }); };
 $("eFocus").onclick = function(){ var it = E.it; closeSheets(); openFocus(it); };
@@ -1092,7 +1093,7 @@ var DEFAULT_TEMPLATES = [
 var SETTINGS = null;
 function applySettings(s){
   s = s || {};
-  SETTINGS = { presets: s.presets || JSON.parse(JSON.stringify(DEFAULT_PRESETS)), templates: s.templates || JSON.parse(JSON.stringify(DEFAULT_TEMPLATES)), swept: s.swept || {}, hideLectures: !!s.hideLectures };
+  SETTINGS = { presets: s.presets || JSON.parse(JSON.stringify(DEFAULT_PRESETS)), templates: s.templates || JSON.parse(JSON.stringify(DEFAULT_TEMPLATES)), swept: s.swept || {}, hideLectures: !!s.hideLectures, removedClasses: s.removedClasses || [] };
   lsSet("planner-settings", JSON.stringify(SETTINGS));
 }
 function saveSettings(){
@@ -1120,7 +1121,7 @@ function loadDay(key){
   var mon = mondayOf(key), today = todayKey();
   var to = dk(addDays(mon, 7)), lastDay = dk(addDays(kd(key), N)); if (lastDay > to) to = lastDay;
   return api("load", { from: dk(addDays(mon, -1)), to: to, dayFrom: dk(addDays(kd(key), -1)), dayTo: lastDay,
-    todayKey: today, withOpen: key >= today, withSettings: true })
+    todayKey: today, withOpen: key >= today, withSettings: true, removed: SETTINGS ? SETTINGS.removedClasses : undefined })
     .then(function(raw){
       if (raw.settings !== undefined) applySettings(raw.settings);
       var d = buildDay(key, raw); lsSet("planner-day-" + key, JSON.stringify(raw)); return d;
@@ -1138,9 +1139,12 @@ function buildDay(key, raw){
     for (var x = new Date(s.getFullYear(), s.getMonth(), s.getDate()); x < e; x = addDays(x, 1)) dots[dk(x)] = true;
     if (all){ addAD(dk(s), b.title); return; }
     if (e.getTime() <= s0 || s.getTime() >= s1) return;
+    var cm = /^tt:([^|]+)/.exec(b.source || ""), isLec = /lecture/i.test(b.where || "");
+    if (cm && isLec && SETTINGS.hideLectures) return;
     var pr = presetByName(b.presetName) || presetById(b.presetName), look = guessLook(b.title);
     items.push({ id: b.id, kind: "block", title: b.title, start: toMin(s.getTime()), end: toMin(e.getTime()), preset: (pr || look.preset || {}).id || null,
-      icon: b.icon || (pr && pr.icon) || look.icon, color: b.colour || (pr && pr.color) || look.color, checklist: b.checklist || [] });
+      icon: b.icon || (pr && pr.icon) || look.icon, color: b.colour || (pr && pr.color) || look.color, checklist: b.checklist || [],
+      meta: b.where || "", tt: cm ? cm[1] : null, lecture: isLec });
   });
   (raw.classes || []).forEach(function(c){
     var s = parseND(c.start); if (!s) return;
@@ -1234,10 +1238,16 @@ function handle(a){
         if (a.title) ps.push(api("todoTitle", { id: a.id, title: a.title }));
         return Promise.all(ps);
       }
+      if (a.kind === "event") return api("eventUpdate", { id: a.id, title: a.title || null, start: a.start !== undefined ? iso(a.start) : null, end: a.start !== undefined ? iso(a.end) : null }).then(function(){ toast("shared calendar updated ✓"); });
       var b = {}; if (a.title) b.title = a.title; if (a.start !== undefined){ b.start = iso(a.start); b.end = iso(a.end); } if (a.icon) b.icon = a.icon; if (a.color) b.colour = a.color;
       return api("updateBlock", { id: a.id, block: b });
     case "delete":
       if (a.kind === "todo") return api("todoDate", { id: a.id, start: key }).then(function(){ toast('"' + a.title + '" is back in your to-dos'); });
+      if (a.tt){
+        if (SETTINGS.removedClasses.indexOf(a.tt) < 0) SETTINGS.removedClasses.push(a.tt);
+        if (SETTINGS.removedClasses.length > 600) SETTINGS.removedClasses = SETTINGS.removedClasses.slice(-500);
+        return saveSettings().then(function(){ return api("archive", { id: a.id }); }).then(function(){ toast('removed "' + a.title + '" from your planner · still in your timetable'); });
+      }
       return api("archive", { id: a.id }).then(function(){ toast('deleted "' + a.title + '"'); });
     case "done":
       return api("todoDone", { id: a.id, title: a.title, dateKey: isToday ? key : null, which: "morning" }).then(function(r){ toast(r.habit ? "done ✓ · " + r.habit + " habit ticked too" : "done ✓ nice one"); });
@@ -1249,7 +1259,7 @@ function handle(a){
     case "late":
       // the screen already moved them — save each change
       return (a.changes || []).reduce(function(p, c){
-        return p.then(function(){ return c.kind === "todo" ? api("todoDate", { id: c.id, start: iso(c.start), end: iso(c.end) }) : api("updateBlock", { id: c.id, block: { start: iso(c.start), end: iso(c.end) } }); });
+        return p.then(function(){ return c.kind === "todo" ? api("todoDate", { id: c.id, start: iso(c.start), end: iso(c.end) }) : c.kind === "event" ? api("eventUpdate", { id: c.id, start: iso(c.start), end: iso(c.end) }) : api("updateBlock", { id: c.id, block: { start: iso(c.start), end: iso(c.end) } }); });
       }, Promise.resolve()).then(function(){ return reload(true); });
     case "day": return loadDay(a.key).then(function(){ show(); });
     case "savePresets": SETTINGS.presets = a.presets; return saveSettings();
