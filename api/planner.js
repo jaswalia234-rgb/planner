@@ -43,6 +43,7 @@ async function queryAll(db, body = {}, maxPages = 10) {
   } while (cursor && ++n < maxPages);
   return out;
 }
+const stepText = (text, todo) => todo ? [{ type: "mention", mention: { page: { id: todo } } }] : rt(text);
 const rt = (s) => {
   s = String(s || ""); const parts = [];
   for (let i = 0; i < s.length && parts.length < 100; i += 1900) parts.push({ type: "text", text: { content: s.slice(i, i + 1900) } });
@@ -81,7 +82,10 @@ async function checklist(id, edited) {
   const hit = MEM.children[id];
   if (hit && hit.edited === edited) return hit.items;
   const r = await notion(`blocks/${id}/children?page_size=100`);
-  const items = (r.results || []).filter(x => x.type === "to_do").map(x => ({ id: x.id, text: plain(x.to_do.rich_text), checked: !!x.to_do.checked }));
+  const items = (r.results || []).filter(x => x.type === "to_do").map(x => {
+    const men = (x.to_do.rich_text || []).find(t => t.type === "mention" && t.mention && t.mention.page);
+    return { id: x.id, text: plain(x.to_do.rich_text), checked: !!x.to_do.checked, todo: men ? men.mention.page.id : null };
+  });
   MEM.children[id] = { edited, items };
   return items;
 }
@@ -326,12 +330,14 @@ const OPS = {
   async todoNew(a) { await notion("pages", "POST", { parent: { database_id: DB.todo }, properties: { [T.title]: { title: rt(a.title) }, [T.date]: { date: { start: a.date } }, [T.done]: { checkbox: false } } }); return {}; },
   async check(a) {
     await notion(`blocks/${a.id}`, "PATCH", { to_do: { checked: !!a.checked } });
+    // a step that's one of your to-dos: ticking it ticks the to-do too
+    if (a.todo) await notion(`pages/${a.todo}`, "PATCH", { properties: { [T.done]: { checkbox: !!a.checked } } }).catch(() => {});
     if (a.block) delete MEM.children[a.block];
     const habit = a.checked && a.dateKey ? await habitLink(a.text, a.dateKey, a.which).catch(() => null) : null;
     return { habit };
   },
   async addItem(a) {
-    const r = await notion(`blocks/${a.page}/children`, "PATCH", { children: [{ object: "block", type: "to_do", to_do: { rich_text: rt(a.text), checked: false } }] });
+    const r = await notion(`blocks/${a.page}/children`, "PATCH", { children: [{ object: "block", type: "to_do", to_do: { rich_text: stepText(a.text, a.todo), checked: false } }] });
     delete MEM.children[a.page];
     return { id: ((r.results || [])[0] || {}).id };
   },
@@ -339,7 +345,7 @@ const OPS = {
   async reorderItems(a) {
     const r = await notion(`blocks/${a.page}/children?page_size=100`);
     for (const b of (r.results || []).filter(x => x.type === "to_do")) await notion(`blocks/${b.id}`, "DELETE");
-    const out = await notion(`blocks/${a.page}/children`, "PATCH", { children: (a.items || []).map(i => ({ object: "block", type: "to_do", to_do: { rich_text: rt(i.text), checked: !!i.checked } })) });
+    const out = await notion(`blocks/${a.page}/children`, "PATCH", { children: (a.items || []).map(i => ({ object: "block", type: "to_do", to_do: { rich_text: stepText(i.text, i.todo), checked: !!i.checked } })) });
     delete MEM.children[a.page];
     return { ids: (out.results || []).filter(x => x.type === "to_do").map(x => x.id) };
   },
