@@ -335,6 +335,14 @@ const OPS = {
     delete MEM.children[a.page];
     return { id: ((r.results || [])[0] || {}).id };
   },
+  // new order for a checklist: rewrite the steps in the order you dragged them into
+  async reorderItems(a) {
+    const r = await notion(`blocks/${a.page}/children?page_size=100`);
+    for (const b of (r.results || []).filter(x => x.type === "to_do")) await notion(`blocks/${b.id}`, "DELETE");
+    const out = await notion(`blocks/${a.page}/children`, "PATCH", { children: (a.items || []).map(i => ({ object: "block", type: "to_do", to_do: { rich_text: rt(i.text), checked: !!i.checked } })) });
+    delete MEM.children[a.page];
+    return { ids: (out.results || []).filter(x => x.type === "to_do").map(x => x.id) };
+  },
   async renameItem(a) { await notion(`blocks/${a.id}`, "PATCH", { to_do: { rich_text: rt(a.text) } }); if (a.page) delete MEM.children[a.page]; return {}; },
   async delItem(a) { await notion(`blocks/${a.id}`, "DELETE"); if (a.page) delete MEM.children[a.page]; return {}; },
   async saveSettings(a) { await writeSettings(a.settings); return {}; },
