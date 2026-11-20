@@ -126,6 +126,7 @@ button{font:inherit;color:inherit;background:none;border:0}
 .ckl .c.y .bx{background:var(--text);border-color:var(--text);color:var(--bg)}
 .ckl .c span{flex:1}
 .ckl .c .x{color:var(--text3);padding:0 4px;font-size:15px}
+.b.dropin{outline:2.5px dashed var(--accent);outline-offset:2px}
 .ckl .c .hd{color:var(--text3);padding:4px 2px;cursor:grab;touch-action:none;display:flex;align-items:center}
 .ckl .c.lift{background:var(--surf2);border-radius:12px;box-shadow:0 6px 18px rgba(0,0,0,.35);position:relative;z-index:2}
 .tin{width:auto;flex:1;min-width:96px;padding:9px 12px;font-size:16px;color-scheme:dark}
@@ -544,8 +545,20 @@ function startTrayDrag(x, yy){
 }
 function gridColAt(clientX){ var r = $("layer").getBoundingClientRect(); return wide() ? Math.max(0, Math.min(N - 1, Math.floor((clientX - r.left) / (r.width / N)))) : 0; }
 function gridMinAt(clientY, clientX){ var r = $("layer").getBoundingClientRect(); return gridColAt(clientX) * 1440 + D.startHour * 60 + (clientY - r.top) / PPM; }
+function blockUnder(x, y){
+  var tag = $("dragTag"), gh = $("ghost"), v1 = tag.style.visibility, v2 = gh.style.visibility;
+  tag.style.visibility = "hidden"; gh.style.visibility = "hidden";
+  var el = document.elementFromPoint(x, y);
+  tag.style.visibility = v1; gh.style.visibility = v2;
+  var b = el && el.closest(".b");
+  return b && b._it && b._it.kind === "block" && b._it.id.indexOf("temp") !== 0 ? b : null;
+}
 function moveTrayDrag(x, yy){
   var tag = $("dragTag"); tag.style.left = (x - 40) + "px"; tag.style.top = (yy - 22) + "px";
+  var over = blockUnder(x, yy);
+  document.querySelectorAll(".b.dropin").forEach(function(e){ if (e !== over) e.classList.remove("dropin"); });
+  if (over){ over.classList.add("dropin"); $("ghost").style.display = "none"; tdrag.min = null; tdrag.target = over._it; return; }
+  tdrag.target = null;
   var sTop = $("scroll").getBoundingClientRect().top;
   var gh = $("ghost");
   if (yy > sTop && x > $("layer").getBoundingClientRect().left - 40){ var m = Math.floor(gridMinAt(yy, x) / SNAP) * SNAP; gh.style.display = "block"; placeEl(gh, m, m + 60, colOf(m), wide() ? 0 : undefined, 1); gh.textContent = dayPrefix(m) + hm(m) + " – " + hm(m + 60); tdrag.min = m; }
@@ -599,6 +612,15 @@ function addFromPreset(p, start){
     checklist: (p.checklist || []).map(function(t, i){ return { id: "tc" + tempN + "-" + i, text: t, checked: false }; }) };
   items.push(it); draw(); markDot();
   send({ type: "add", temp: it.id, title: it.title, preset: p.id, icon: p.icon, color: p.color, start: it.start, end: it.end, checklist: it.checklist.map(function(c){ return { temp: c.id, text: c.text }; }) });
+}
+function todoIntoBlock(td, it){
+  document.querySelectorAll(".b.dropin").forEach(function(e){ e.classList.remove("dropin"); });
+  var c = { id: "ti" + (++tempN), text: td.title, checked: false, todo: td.id };
+  it.checklist = it.checklist || []; it.checklist.push(c);
+  D.tray = D.tray.filter(function(t){ return t.id !== td.id; });
+  draw(); drawTray();
+  send({ type: "addItem", page: it.id, temp: c.id, text: td.title, todo: td.id });
+  toast('added "' + td.title + '" to ' + it.title);
 }
 function scheduleTodo(td, start, len){
   items.push({ id: td.id, kind: "todo", title: td.title, color: "clay", start: start, end: start + len, checklist: [] });
@@ -699,7 +721,7 @@ function endCkDrag(){
   if (!d.moved || d.at === d.from){ drawEdit(); return; }
   var list = E.it.checklist, item = list.splice(d.from, 1)[0]; list.splice(d.at, 0, item);
   draw(); drawEdit();
-  send({ type: "reorder", page: E.it.id, items: list.map(function(c){ return { text: c.text, checked: !!c.checked }; }) });
+  send({ type: "reorder", page: E.it.id, items: list.map(function(c){ return { text: c.text, checked: !!c.checked, todo: c.todo || null }; }) });
 }
 $("eCk").addEventListener("pointerup", endCkDrag);
 $("eCk").addEventListener("pointercancel", endCkDrag);
@@ -748,7 +770,7 @@ function toggleItem(it, i){
   var c = it.checklist[i]; if (!c) return;
   if (c.id.indexOf("tc") === 0 || c.id.indexOf("ti") === 0){ toast("still saving — try again in a sec"); return; }
   c.checked = !c.checked; draw(); if (focusIt === it) drawFocus();
-  send({ type: "check", id: c.id, checked: c.checked, text: c.text, start: it.start, block: it.id });
+  send({ type: "check", id: c.id, checked: c.checked, text: c.text, start: it.start, block: it.id, todo: c.todo || null });
 }
 
 // ---------- hold to move, drag the bottom to stretch, tap to open ----------
@@ -792,7 +814,7 @@ document.addEventListener("touchend", function(){
     var d = tdrag; tdrag = null;
     if (!d.on){ return; }
     d.row.classList.remove("drag"); $("dragTag").style.display = "none"; $("ghost").style.display = "none";
-    if (d.min != null) scheduleTodo(d.todo, d.min, 60); else toast("drop it on a time");
+    if (d.target) todoIntoBlock(d.todo, d.target); else if (d.min != null) scheduleTodo(d.todo, d.min, 60); else toast("drop it on a time or a block");
     return;
   }
   if (!drag) return;
@@ -849,7 +871,7 @@ document.addEventListener("mouseup", function(){
     var d = mtd; mtd = null; tdrag = null;
     if (!d.on){ $("tray").classList.remove("open"); drawTray(); setPlacing({ todo: d.todo }); return; }
     d.row.classList.remove("drag"); $("dragTag").style.display = "none"; $("ghost").style.display = "none";
-    if (d.min != null) scheduleTodo(d.todo, d.min, 60); else toast("drop it on a time");
+    if (d.target) todoIntoBlock(d.todo, d.target); else if (d.min != null) scheduleTodo(d.todo, d.min, 60); else toast("drop it on a time or a block");
     return;
   }
   if (!mdrag) return;
@@ -1210,7 +1232,8 @@ function buildDay(key, raw){
   });
   items.sort(function(a, b){ return a.start - b.start; });
   var today = todayKey();
-  var tray = (raw.open || []).filter(function(t){ return !t.timed; }).slice(0, 40).map(function(t){
+  var inBlocks = {}; (raw.blocks || []).forEach(function(b){ (b.checklist || []).forEach(function(c){ if (c.todo) inBlocks[c.todo.replace(/-/g, "")] = true; }); });
+  var tray = (raw.open || []).filter(function(t){ return !t.timed && !inBlocks[String(t.id).replace(/-/g, "")]; }).slice(0, 40).map(function(t){
     var d = t.dateKey ? kd(t.dateKey) : null;
     return { id: t.id, title: t.title, meta: t.dateKey && t.dateKey < today ? "since " + d.getDate() + " " + MN[d.getMonth()].slice(0, 3) : urgencyShort(t.urgency) };
   });
@@ -1295,8 +1318,8 @@ function handle(a){
       return api("todoDone", { id: a.id, title: a.title, dateKey: isToday ? key : null, which: "morning" }).then(function(r){ toast(r.habit ? "done ✓ · " + r.habit + " habit ticked too" : "done ✓ nice one"); });
     case "check":
       var stepDay = dk(addDays(kd(key), Math.floor(a.start / 1440)));
-      return api("check", { id: a.id, checked: a.checked, text: a.text, block: a.block, dateKey: stepDay === todayKey() && a.checked ? stepDay : null, which: which(((a.start % 1440) + 1440) % 1440) }).then(function(r){ if (r.habit) toast(r.habit + " habit ticked too ✓"); });
-    case "addItem": return api("addItem", { page: a.page, text: a.text }).then(function(r){ if (r.id) savedItem({ temp: a.temp, id: r.id }); });
+      return api("check", { id: a.id, checked: a.checked, text: a.text, block: a.block, todo: a.todo || null, dateKey: stepDay === todayKey() && a.checked ? stepDay : null, which: which(((a.start % 1440) + 1440) % 1440) }).then(function(r){ if (r.habit) toast(r.habit + " habit ticked too ✓"); });
+    case "addItem": return api("addItem", { page: a.page, text: a.text, todo: a.todo || null }).then(function(r){ if (r.id) savedItem({ temp: a.temp, id: r.id }); });
     case "delItem": return api("delItem", { id: a.id });
     case "reorder":
       return api("reorderItems", { page: a.page, items: a.items }).then(function(r){
