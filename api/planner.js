@@ -11,7 +11,7 @@ const DB = {
   shared: "3e6aedaf73e880648b85dfed8c75a3b1",
   habits: "236aedaf73e8820597e501c00c659bb1"
 };
-const P = { title: "Name", date: "Date", preset: "preset", icon: "icon", colour: "colour" };
+const P = { title: "Name", date: "Date", preset: "preset", icon: "icon", colour: "colour", source: "source", where: "where" };
 const T = { title: "task", date: "the date", done: "done", urgency: "urgency", category: "category" };
 const H = { date: "the date", status: "status" };
 const SETTINGS_TITLE = "planner settings";
@@ -68,14 +68,14 @@ const dateOf = (p) => p && p.type === "date" && p.date && p.date.start ? { start
 const dayPart = (s) => String(s || "").slice(0, 10);
 
 // small in-memory caches (live while the function stays warm)
-const MEM = globalThis.__plannerMem || (globalThis.__plannerMem = { children: {}, timetable: null, settingsId: null });
+const MEM = globalThis.__plannerMem || (globalThis.__plannerMem = { children: {}, timetable: null, settingsId: null, creating: {} });
 
 // ---------- reading ----------
 function blockOf(p) {
   const pr = p.properties || {}, d = dateOf(pr[P.date]);
   if (!d) return null;
   return { id: p.id, edited: p.last_edited_time, title: (firstTitle(pr) || "block").trim(), start: d.start, end: d.end,
-    presetName: txt(pr[P.preset]), icon: txt(pr[P.icon]), colour: txt(pr[P.colour]) };
+    presetName: txt(pr[P.preset]), icon: txt(pr[P.icon]), colour: txt(pr[P.colour]), source: txt(pr[P.source]), where: txt(pr[P.where]) };
 }
 async function checklist(id, edited) {
   const hit = MEM.children[id];
@@ -188,6 +188,8 @@ async function ensureColumns() {
   if (!have[P.preset]) add[P.preset] = { select: {} };
   if (!have[P.icon]) add[P.icon] = { rich_text: {} };
   if (!have[P.colour]) add[P.colour] = { select: {} };
+  if (!have[P.source]) add[P.source] = { rich_text: {} };
+  if (!have[P.where]) add[P.where] = { rich_text: {} };
   if (Object.keys(add).length) await notion(`databases/${DB.planner}`, "PATCH", { properties: add });
   colsOk = true;
 }
@@ -198,6 +200,8 @@ function blockProps(b) {
   if (b.presetName !== undefined) pr[P.preset] = b.presetName ? { select: { name: String(b.presetName).replace(/,/g, " ").slice(0, 100) } } : { select: null };
   if (b.icon) pr[P.icon] = { rich_text: rt(b.icon) };
   if (b.colour) pr[P.colour] = { select: { name: b.colour } };
+  if (b.source !== undefined) pr[P.source] = { rich_text: rt(b.source) };
+  if (b.where !== undefined) pr[P.where] = { rich_text: rt(b.where) };
   return pr;
 }
 async function createBlock(b) {
@@ -210,6 +214,46 @@ async function createBlock(b) {
     itemIds = (r.results || []).filter(x => x.type === "to_do").map(x => x.id);
   }
   return { id: page.id, itemIds };
+}
+
+// ---------- classes → planner copies ----------
+// Every class/lecture in the days being shown gets its own planner block (source "tt:<id>|<start>|<end>").
+// You can move, rename or remove the copy: your uni timetable never changes.
+// Removed ones are remembered (planner settings → removedClasses) so they don't come back.
+const sameTime = (a, b) => (!a && !b) || (a && b && Date.parse(a) === Date.parse(b));
+async function syncClasses(a, blocks, tt, settings) {
+  const removed = new Set(a.removed || (settings && settings.removedClasses) || []);
+  const rows = tt.filter(c => !c.deadline && String(c.start).length > 10 && dayPart(c.start) >= a.dayFrom && dayPart(c.start) <= a.dayTo);
+  const copies = {};
+  blocks.forEach(b => { const m = /^tt:([^|]+)/.exec(b.source || ""); if (m) (copies[m[1]] = copies[m[1]] || []).push(b); });
+  // tidy any accidental doubles
+  for (const id in copies) if (copies[id].length > 1) {
+    const extra = copies[id].slice(1);
+    copies[id] = copies[id].slice(0, 1);
+    for (const b of extra) { await notion(`pages/${b.id}`, "PATCH", { archived: true }).catch(() => {}); const i = blocks.indexOf(b); if (i >= 0) blocks.splice(i, 1); }
+  }
+  for (const c of rows) {
+    if (removed.has(c.id)) continue;
+    const end = c.end || new Date(Date.parse(c.start) + 3600000).toISOString();
+    const where = [c.type, c.location].filter(Boolean).join(" · ");
+    const source = `tt:${c.id}|${c.start}|${end}`;
+    const cp = (copies[c.id] || [])[0];
+    if (!cp) {
+      if (MEM.creating[c.id] && Date.now() - MEM.creating[c.id] < 30000) continue;
+      MEM.creating[c.id] = Date.now();
+      const title = `${c.title}${c.type && !c.title.toLowerCase().includes(c.type) ? " " + c.type : ""}`;
+      const made = await createBlock({ title, start: c.start, end, icon: "graduation-cap", colour: "mauve", source, where }).catch(() => null);
+      if (made) blocks.push({ id: made.id, edited: "", title, start: c.start, end, presetName: "", icon: "graduation-cap", colour: "mauve", source, where, checklist: [] });
+      continue;
+    }
+    // the timetable changed and you haven't moved the copy yourself → follow the timetable
+    const [, s0, e0] = String(cp.source).split("|");
+    const untouched = sameTime(cp.start, s0) && sameTime(cp.end, e0);
+    if (untouched && (!sameTime(c.start, s0) || !sameTime(end, e0) || cp.where !== where)) {
+      await notion(`pages/${cp.id}`, "PATCH", { properties: blockProps({ start: c.start, end, source, where }) }).catch(() => {});
+      Object.assign(cp, { start: c.start, end, source, where });
+    }
+  }
 }
 
 // ---------- habit link ----------
@@ -249,16 +293,29 @@ const OPS = {
       a.withSettings ? readSettings().catch(() => null) : Promise.resolve(undefined)
     ]);
     const blocks = pages.map(blockOf).filter(Boolean);
+    await ensureColumns().catch(() => {});
+    // which copies you've removed: sent by the app, or read from your planner settings
+    const st = settings || (a.removed ? null : await readSettings().catch(() => null));
+    await syncClasses(a, blocks, tt, st).catch(() => {});
     // checklists for blocks around the day being shown
     if (!a.noChecklists) await Promise.all(blocks.filter(b => dayPart(b.start) >= a.dayFrom && dayPart(b.start) <= a.dayTo || (b.end && dayPart(b.end) >= a.dayFrom && dayPart(b.start) <= a.dayTo))
       .map(async b => { b.checklist = await checklist(b.id, b.edited).catch(() => []); }));
-    const classes = tt.filter(c => dayPart(c.start) >= a.dayFrom && dayPart(c.start) <= a.dayTo);
+    // timed classes are now planner blocks; only deadlines and all-day entries come through here
+    const classes = tt.filter(c => dayPart(c.start) >= a.dayFrom && dayPart(c.start) <= a.dayTo && (c.deadline || String(c.start).length <= 10));
     return { blocks, classes, shared: sh, timed, open, settings };
   },
   async createBlock(a) { return createBlock(a.block); },
   async createMany(a) { const out = []; for (const b of a.blocks || []) out.push(await createBlock(b)); return { ids: out.map(o => o.id) }; },
   async updateBlock(a) { await notion(`pages/${a.id}`, "PATCH", { properties: blockProps(a.block) }); return {}; },
   async archive(a) { await notion(`pages/${a.id}`, "PATCH", { archived: true }); delete MEM.children[a.id]; return {}; },
+  // shared calendar events: moving/renaming in the planner changes the shared calendar too
+  async eventUpdate(a) {
+    const pr = {};
+    if (a.title) pr.Name = { title: rt(a.title) };
+    if (a.start) { pr["start time"] = { date: { start: a.start } }; if (a.end) pr["end time"] = { date: { start: a.end } }; }
+    if (Object.keys(pr).length) await notion(`pages/${a.id}`, "PATCH", { properties: pr });
+    return {};
+  },
   async todoDate(a) { await notion(`pages/${a.id}`, "PATCH", { properties: { [T.date]: { date: { start: a.start, end: a.end || null } } } }); return {}; },
   async todoTitle(a) { await notion(`pages/${a.id}`, "PATCH", { properties: { [T.title]: { title: rt(a.title) } } }); return {}; },
   async todoDone(a) {
